@@ -17,15 +17,15 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtSql import QSqlDatabase, QSqlTableModel
 
-from app.database import DB_PATH, SessionLocal
-from app.models import Membro
+from app.database import DB_PATH
+from app.repository import MembroRepository
 
 
 class JanelaPrincipal(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("nexo — Sistema de RH")
-        self.resize(1000, 680)
+        self.repo = MembroRepository()
 
         # Conexão do Qt com o SQLite (só para exibição)
         db = QSqlDatabase.addDatabase("QSQLITE")
@@ -100,14 +100,13 @@ class JanelaPrincipal(QMainWindow):
             QMessageBox.warning(self, "Campo obrigatório", "Informe o nome do membro.")
             return
 
-        cargo = self.input_cargo.currentText().strip() or None
-        email = self.input_email.text().strip() or None
-        status = self.input_status.currentText()
-
         try:
-            with SessionLocal() as session:
-                session.add(Membro(nome=nome, cargo=cargo, email=email, status=status))
-                session.commit()
+            self.repo.criar(
+                nome=nome,
+                cargo=self.input_cargo.currentText().strip() or None,
+                email=self.input_email.text().strip() or None,
+                status=self.input_status.currentText(),
+            )
         except Exception as exc:
             QMessageBox.critical(self, "Erro ao salvar", str(exc))
             return
@@ -125,19 +124,12 @@ class JanelaPrincipal(QMainWindow):
 
         membro_id = self.model.data(self.model.index(idx.row(), 0))
         confirm = QMessageBox.question(
-            self,
-            "Confirmar exclusão",
-            f"Excluir o membro de ID {membro_id}?",
+            self, "Confirmar exclusão", f"Excluir o membro de ID {membro_id}?"
         )
         if confirm != QMessageBox.StandardButton.Yes:
             return
 
-        with SessionLocal() as session:
-            m = session.get(Membro, int(membro_id))
-            if m:
-                session.delete(m)
-                session.commit()
-
+        self.repo.excluir(int(membro_id))
         self.recarregar()
 
 
