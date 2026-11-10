@@ -1,7 +1,9 @@
 from datetime import date
 
+from sqlalchemy import func
+
 from app.database import SessionLocal
-from app.models import Membro
+from app.models import Membro, Reuniao, Presenca
 
 
 class MembroRepository:
@@ -10,6 +12,15 @@ class MembroRepository:
     def listar(self) -> list[Membro]:
         with SessionLocal() as session:
             return session.query(Membro).order_by(Membro.nome).all()
+
+    def listar_ativos(self) -> list[Membro]:
+        with SessionLocal() as session:
+            return (
+                session.query(Membro)
+                .filter(Membro.status == "Ativo")
+                .order_by(Membro.nome)
+                .all()
+            )
 
     def criar(
         self,
@@ -46,3 +57,101 @@ class MembroRepository:
             session.delete(membro)
             session.commit()
             return True
+
+    def percentual_presenca(self, membro_id: int) -> float:
+        """% de presenca do membro em relacao ao total de reunioes registradas.
+
+        Conta 'Presente' e 'Justificado' como presenca (regra da Liga).
+        Retorna 0.0 se nao houver reunioes registradas.
+        """
+        with SessionLocal() as session:
+            total = session.query(func.count(Reuniao.id)).scalar() or 0
+            if total == 0:
+                return 0.0
+            compareceu = (
+                session.query(func.count(Presenca.id))
+                .filter(
+                    Presenca.membro_id == membro_id,
+                    Presenca.status.in_(["Presente", "Justificado"]),
+                )
+                .scalar()
+                or 0
+            )
+            return round((compareceu / total) * 100, 1)
+
+
+class ReuniaoRepository:
+    """Camada de acesso a dados de reunioes."""
+
+    def listar(self) -> list[Reuniao]:
+        with SessionLocal() as session:
+            return session.query(Reuniao).order_by(Reuniao.data.desc()).all()
+
+    def criar(self, titulo: str, data_reuniao: date, tipo: str = "Geral") -> Reuniao:
+        with SessionLocal() as session:
+            reuniao = Reuniao(titulo=titulo, data=data_reuniao, tipo=tipo)
+            session.add(reuniao)
+            session.commit()
+            session.refresh(reuniao)
+            return reuniao
+
+    def excluir(self, reuniao_id: int) -> bool:
+        with SessionLocal() as session:
+            reuniao = session.get(Reuniao, reuniao_id)
+            if not reuniao:
+                return False
+            session.query(Presenca).filter(Presenca.reuniao_id == reuniao_id).delete()
+            session.delete(reuniao)
+            session.commit()
+            return True
+
+
+class PresencaRepository:
+    """Camada de acesso a dados de presencas."""
+
+    def registrar(
+        self, reuniao_id: int, membro_id: int, status: str = "Presente"
+    ) -> Presenca:
+        """Cria ou atualiza a presenca (upsert manual)."""
+        with SessionLocal() as session:
+            existente = (
+                session.query(Presenca)
+                .filter(
+                    Presenca.reuniao_id == reuniao_id,
+                    Presenca.membro_id == membro_id,
+                )
+                .one_or_none()
+            )
+            if existente:
+                existente.status = status
+                session.commit()
+                session.refresh(existente)
+                return existente
+
+            presenca = Presenca(
+                reuniao_id=reuniao_id, membro_id=membro_id, status=status
+            )
+            session.add(presenca)
+            session.commit()
+            session.refresh(presenca)
+            return presenca
+
+    def listar_por_reuniao(self, reuniao_id: int) -> list[Presenca]:
+        with SessionLocal() as session:
+            return (
+                session.query(Presenca)
+                .filter(Presenca.reuniao_id == reuniao_id)
+                .all()
+            )
+
+    def status_de(self, reuniao_id: int, membro_id: int) -> str | None:
+        with SessionLocal() as session:
+            p = (
+                session.query(Presenca)
+                .filter(
+                    Presenca.reuniao_id == reuniao_id,
+                    Presenca.membro_id == membro_id,
+                )
+                .one_or_none()
+            )
+            return p.status if p else None
