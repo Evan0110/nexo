@@ -22,6 +22,10 @@ class MembroRepository:
                 .all()
             )
 
+    def obter(self, membro_id: int) -> Membro | None:
+        with SessionLocal() as session:
+            return session.get(Membro, membro_id)
+
     def criar(
         self,
         nome: str,
@@ -45,6 +49,34 @@ class MembroRepository:
                 status=status,
             )
             session.add(membro)
+            session.commit()
+            session.refresh(membro)
+            return membro
+
+    def atualizar(
+        self,
+        membro_id: int,
+        nome: str,
+        matricula: str | None = None,
+        cargo: str | None = None,
+        departamento: str | None = None,
+        email: str | None = None,
+        telefone: str | None = None,
+        data_ingresso: date | None = None,
+        status: str = "Ativo",
+    ) -> Membro | None:
+        with SessionLocal() as session:
+            membro = session.get(Membro, membro_id)
+            if not membro:
+                return None
+            membro.nome = nome
+            membro.matricula = matricula
+            membro.cargo = cargo
+            membro.departamento = departamento
+            membro.email = email
+            membro.telefone = telefone
+            membro.data_ingresso = data_ingresso
+            membro.status = status
             session.commit()
             session.refresh(membro)
             return membro
