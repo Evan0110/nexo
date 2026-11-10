@@ -2,7 +2,7 @@ from datetime import date
 
 from sqlalchemy import func
 
-from app.database import SessionLocal
+from app import database
 from app.models import Membro, Reuniao, Presenca
 
 
@@ -10,11 +10,11 @@ class MembroRepository:
     """Camada de acesso a dados de membros."""
 
     def listar(self) -> list[Membro]:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             return session.query(Membro).order_by(Membro.nome).all()
 
     def listar_ativos(self) -> list[Membro]:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             return (
                 session.query(Membro)
                 .filter(Membro.status == "Ativo")
@@ -23,7 +23,7 @@ class MembroRepository:
             )
 
     def obter(self, membro_id: int) -> Membro | None:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             return session.get(Membro, membro_id)
 
     def criar(
@@ -37,7 +37,7 @@ class MembroRepository:
         data_ingresso: date | None = None,
         status: str = "Ativo",
     ) -> Membro:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             membro = Membro(
                 nome=nome,
                 matricula=matricula,
@@ -65,7 +65,7 @@ class MembroRepository:
         data_ingresso: date | None = None,
         status: str = "Ativo",
     ) -> Membro | None:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             membro = session.get(Membro, membro_id)
             if not membro:
                 return None
@@ -82,7 +82,7 @@ class MembroRepository:
             return membro
 
     def excluir(self, membro_id: int) -> bool:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             membro = session.get(Membro, membro_id)
             if not membro:
                 return False
@@ -96,7 +96,7 @@ class MembroRepository:
         Conta 'Presente' e 'Justificado' como presenca (regra da Liga).
         Retorna 0.0 se nao houver reunioes registradas.
         """
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             total = session.query(func.count(Reuniao.id)).scalar() or 0
             if total == 0:
                 return 0.0
@@ -115,7 +115,7 @@ class MembroRepository:
 
     def estatisticas_gerais(self) -> dict:
         """KPIs para o dashboard: totais + lista de membros abaixo de 75%."""
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             total_ativos = (
                 session.query(func.count(Membro.id))
                 .filter(Membro.status == "Ativo")
@@ -179,11 +179,11 @@ class ReuniaoRepository:
     """Camada de acesso a dados de reunioes."""
 
     def listar(self) -> list[Reuniao]:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             return session.query(Reuniao).order_by(Reuniao.data.desc()).all()
 
     def criar(self, titulo: str, data_reuniao: date, tipo: str = "Geral") -> Reuniao:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             reuniao = Reuniao(titulo=titulo, data=data_reuniao, tipo=tipo)
             session.add(reuniao)
             session.commit()
@@ -191,7 +191,7 @@ class ReuniaoRepository:
             return reuniao
 
     def excluir(self, reuniao_id: int) -> bool:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             reuniao = session.get(Reuniao, reuniao_id)
             if not reuniao:
                 return False
@@ -208,7 +208,7 @@ class PresencaRepository:
         self, reuniao_id: int, membro_id: int, status: str = "Presente"
     ) -> Presenca:
         """Cria ou atualiza a presenca (upsert manual)."""
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             existente = (
                 session.query(Presenca)
                 .filter(
@@ -232,7 +232,7 @@ class PresencaRepository:
             return presenca
 
     def listar_por_reuniao(self, reuniao_id: int) -> list[Presenca]:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             return (
                 session.query(Presenca)
                 .filter(Presenca.reuniao_id == reuniao_id)
@@ -240,7 +240,7 @@ class PresencaRepository:
             )
 
     def status_de(self, reuniao_id: int, membro_id: int) -> str | None:
-        with SessionLocal() as session:
+        with database.SessionLocal() as session:
             p = (
                 session.query(Presenca)
                 .filter(

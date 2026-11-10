@@ -2,13 +2,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from app.database import SessionLocal
+from app import database
 from app.models import Membro, Reuniao, Presenca
 
 
 def exportar_membros_csv(caminho: str | Path) -> int:
     """Exporta todos os membros para CSV. Retorna o número de linhas."""
-    with SessionLocal() as session:
+    with database.SessionLocal() as session:
         membros = session.query(Membro).order_by(Membro.nome).all()
 
     dados = [
@@ -36,7 +36,7 @@ def exportar_frequencia_csv(caminho: str | Path) -> dict:
 
     Retorna {'reunioes': N, 'membros': N, 'resumo': {nome: pct}}.
     """
-    with SessionLocal() as session:
+    with database.SessionLocal() as session:
         membros = (
             session.query(Membro)
             .filter(Membro.status == "Ativo")
