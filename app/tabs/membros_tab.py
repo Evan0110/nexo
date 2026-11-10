@@ -14,11 +14,13 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QDateEdit,
     QLabel,
+    QFileDialog,
 )
 from PySide6.QtCore import QDate
 from PySide6.QtSql import QSqlTableModel
 
 from app.repository import MembroRepository
+from app.export import exportar_membros_csv
 
 
 class MembrosTab(QWidget):
@@ -75,12 +77,18 @@ class MembrosTab(QWidget):
         btn_refresh = QPushButton("Atualizar")
         btn_refresh.clicked.connect(self.recarregar)
 
+        btn_exportar = QPushButton("Exportar CSV")
+        btn_exportar.clicked.connect(self.exportar_csv)
+
+
         barra_botoes = QHBoxLayout()
         barra_botoes.addWidget(self.btn_add)
         barra_botoes.addWidget(self.btn_cancelar)
         barra_botoes.addWidget(btn_del)
         barra_botoes.addWidget(btn_refresh)
         barra_botoes.addStretch()
+        barra_botoes.addWidget(btn_refresh)
+        barra_botoes.addWidget(btn_exportar)
 
         # ---- Tabela ----
         self.model = QSqlTableModel()
@@ -194,6 +202,24 @@ class MembrosTab(QWidget):
 
     def cancelar_edicao(self):
         self.limpar_form()
+
+    def exportar_csv(self):
+        caminho, _ = QFileDialog.getSaveFileName(
+            self,
+            "Exportar membros para CSV",
+            "membros.csv",
+            "CSV (*.csv)",
+        )
+        if not caminho:
+            return
+        try:
+            n = exportar_membros_csv(caminho)
+        except Exception as exc:
+            QMessageBox.critical(self, "Erro ao exportar", str(exc))
+            return
+        QMessageBox.information(
+            self, "Exportação concluída", f"{n} membro(s) exportados para:\n{caminho}"
+        )
 
     def excluir_membro(self):
         idx = self.view.currentIndex()

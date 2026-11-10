@@ -17,11 +17,13 @@ from PySide6.QtWidgets import (
     QSplitter,
     QAbstractItemView,
     QDateEdit,
+    QFileDialog,
 )
 from PySide6.QtCore import QDate, Qt
 
 from app.repository import MembroRepository, ReuniaoRepository, PresencaRepository
 
+from app.export import exportar_frequencia_csv
 
 class FrequenciaTab(QWidget):
     def __init__(self):
@@ -55,10 +57,14 @@ class FrequenciaTab(QWidget):
         btn_excluir_reuniao = QPushButton("Excluir reunião")
         btn_excluir_reuniao.clicked.connect(self.excluir_reuniao)
 
+        btn_exportar = QPushButton("Exportar CSV")
+        btn_exportar.clicked.connect(self.exportar_csv)
+
         barra_form = QHBoxLayout()
         barra_form.addWidget(btn_criar)
         barra_form.addWidget(btn_excluir_reuniao)
         barra_form.addStretch()
+        barra_form.addWidget(btn_exportar)
 
         topo = QVBoxLayout()
         topo.addWidget(grupo_form)
@@ -221,3 +227,26 @@ class FrequenciaTab(QWidget):
 
         QMessageBox.information(self, "Sucesso", "Presenças salvas!")
         self.carregar_presencas()  # atualiza os %
+
+    def exportar_csv(self):
+        caminho, _ = QFileDialog.getSaveFileName(
+            self,
+            "Exportar frequência para CSV",
+            "frequencia.csv",
+            "CSV (*.csv)",
+        )
+        if not caminho:
+            return
+        try:
+            info = exportar_frequencia_csv(caminho)
+        except Exception as exc:
+            QMessageBox.critical(self, "Erro ao exportar", str(exc))
+            return
+
+        msg = (
+            f"Exportação concluída!\n\n"
+            f"Reuniões: {info['reunioes']}\n"
+            f"Membros: {info['membros']}\n\n"
+            f"Arquivos gerados:\n" + "\n".join(info["arquivos"])
+        )
+        QMessageBox.information(self, "Exportação concluída", msg)

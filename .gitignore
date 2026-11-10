@@ -11,3 +11,4 @@ wheels/
 nexo.db
 *.db
 *.db.bak
+*.csv
