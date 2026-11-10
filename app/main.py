@@ -6,7 +6,7 @@ from PySide6.QtSql import QSqlDatabase
 from app.database import DB_PATH
 from app.tabs.membros_tab import MembrosTab
 from app.tabs.frequencia_tab import FrequenciaTab
-
+from app.tabs.dashboard_tab import DashboardTab
 
 class JanelaPrincipal(QMainWindow):
     def __init__(self):
@@ -24,6 +24,7 @@ class JanelaPrincipal(QMainWindow):
         tabs = QTabWidget()
         tabs.addTab(MembrosTab(), "Membros")
         tabs.addTab(FrequenciaTab(), "Frequência")
+        tabs.addTab(DashboardTab(), "Dashboard")
         self.setCentralWidget(tabs)
 
 

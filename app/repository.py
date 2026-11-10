@@ -112,6 +112,69 @@ class MembroRepository:
             return round((compareceu / total) * 100, 1)
 
 
+
+    def estatisticas_gerais(self) -> dict:
+        """KPIs para o dashboard: totais + lista de membros abaixo de 75%."""
+        with SessionLocal() as session:
+            total_ativos = (
+                session.query(func.count(Membro.id))
+                .filter(Membro.status == "Ativo")
+                .scalar()
+                or 0
+            )
+            total_reunioes = session.query(func.count(Reuniao.id)).scalar() or 0
+
+            if total_reunioes == 0:
+                return {
+                    "total_ativos": total_ativos,
+                    "total_reunioes": 0,
+                    "presenca_media": 0.0,
+                    "abaixo_75": [],
+                }
+
+            membros_ativos = (
+                session.query(Membro).filter(Membro.status == "Ativo").all()
+            )
+
+            percentuais = []
+            abaixo_75 = []
+            for m in membros_ativos:
+                compareceu = (
+                    session.query(func.count(Presenca.id))
+                    .filter(
+                        Presenca.membro_id == m.id,
+                        Presenca.status.in_(["Presente", "Justificado"]),
+                    )
+                    .scalar()
+                    or 0
+                )
+                pct = round((compareceu / total_reunioes) * 100, 1)
+                percentuais.append(pct)
+                if pct < 75.0:
+                    abaixo_75.append(
+                        {
+                            "id": m.id,
+                            "nome": m.nome,
+                            "matricula": m.matricula,
+                            "percentual": pct,
+                        }
+                    )
+
+            presenca_media = (
+                round(sum(percentuais) / len(percentuais), 1)
+                if percentuais
+                else 0.0
+            )
+            abaixo_75.sort(key=lambda x: x["percentual"])
+
+            return {
+                "total_ativos": total_ativos,
+                "total_reunioes": total_reunioes,
+                "presenca_media": presenca_media,
+                "abaixo_75": abaixo_75,
+            }
+
+
 class ReuniaoRepository:
     """Camada de acesso a dados de reunioes."""
 
