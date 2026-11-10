@@ -1,9 +1,11 @@
+from datetime import date
+
 from app.database import SessionLocal
 from app.models import Membro
 
 
 class MembroRepository:
-    """Camada de acesso a dados de membros. A UI nao fala com o banco direto."""
+    """Camada de acesso a dados de membros."""
 
     def listar(self) -> list[Membro]:
         with SessionLocal() as session:
@@ -12,12 +14,25 @@ class MembroRepository:
     def criar(
         self,
         nome: str,
-        cargo: str | None,
-        email: str | None,
-        status: str,
+        matricula: str | None = None,
+        cargo: str | None = None,
+        departamento: str | None = None,
+        email: str | None = None,
+        telefone: str | None = None,
+        data_ingresso: date | None = None,
+        status: str = "Ativo",
     ) -> Membro:
         with SessionLocal() as session:
-            membro = Membro(nome=nome, cargo=cargo, email=email, status=status)
+            membro = Membro(
+                nome=nome,
+                matricula=matricula,
+                cargo=cargo,
+                departamento=departamento,
+                email=email,
+                telefone=telefone,
+                data_ingresso=data_ingresso,
+                status=status,
+            )
             session.add(membro)
             session.commit()
             session.refresh(membro)

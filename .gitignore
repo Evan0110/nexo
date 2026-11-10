@@ -10,3 +10,4 @@ wheels/
 .venv
 nexo.db
 *.db
+*.db.bak
